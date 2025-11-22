@@ -135,10 +135,11 @@ export default function App() {
     // Validate all questions are answered
     const unanswered = [];
     let firstUnansweredElement = null;
-    
+
     questions.forEach((q, idx) => {
       const qData = responses[q.id];
-      const hasAnyRank = qData && Object.values(qData).some(rank => rank && rank !== "");
+      const hasAnyRank =
+        qData && Object.values(qData).some((rank) => rank && rank !== "");
       if (!hasAnyRank) {
         unanswered.push(`Question ${idx + 1}: ${q.text.substring(0, 50)}...`);
         if (!firstUnansweredElement) {
@@ -159,7 +160,10 @@ export default function App() {
       setValidationErrors(unanswered);
       // Scroll to first unanswered question
       if (firstUnansweredElement) {
-        firstUnansweredElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        firstUnansweredElement.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
       } else {
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
@@ -176,7 +180,7 @@ export default function App() {
       const qData = responses[qId] || {};
       const entry = {};
       for (let i = 0; i < numOptions; i++) {
-        entry[i] = qData[i] || "";
+        entry[i] = qData[i] || "No";
       }
       normalizedResponses[qId] = entry;
     });
@@ -189,7 +193,8 @@ export default function App() {
     };
 
     try {
-      const scriptUrl = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+      const scriptUrl =
+        "https://script.google.com/macros/s/AKfycbz7ATpAs1DXZxHGx8SvnHrwrtfYDXiOMLQ43CnD9RjcOV4O3hRkqNIo5AUNYl5wqJyCmA/exec";
       if (!scriptUrl || scriptUrl === "YOUR_GOOGLE_APPS_SCRIPT_URL") {
         console.error("Google Script URL not configured");
         alert(
@@ -258,16 +263,31 @@ export default function App() {
           <div className="bg-red-50 border border-red-200 p-4 sm:p-5 mb-6 rounded-lg">
             <div className="flex gap-3">
               <div className="flex-shrink-0 mt-0.5">
-                <svg className="h-5 w-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                <svg
+                  className="h-5 w-5 text-red-500"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-red-800">Please complete all required questions</p>
-                <p className="text-sm text-red-700 mt-1">The following items need your attention:</p>
+                <p className="text-sm font-semibold text-red-800">
+                  Please complete all required questions
+                </p>
+                <p className="text-sm text-red-700 mt-1">
+                  The following items need your attention:
+                </p>
                 <ul className="mt-2 space-y-1">
                   {validationErrors.map((error, idx) => (
-                    <li key={idx} className="text-sm text-red-700 flex items-start">
+                    <li
+                      key={idx}
+                      className="text-sm text-red-700 flex items-start"
+                    >
                       <span className="text-red-600 mr-2 font-bold">!</span>
                       <span>{error}</span>
                     </li>
@@ -279,8 +299,16 @@ export default function App() {
                 className="flex-shrink-0 text-red-400 hover:text-red-600 transition"
                 aria-label="Dismiss"
               >
-                <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                <svg
+                  className="h-5 w-5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                    clipRule="evenodd"
+                  />
                 </svg>
               </button>
             </div>
@@ -314,7 +342,15 @@ export default function App() {
                   </h2>
                 </div>
               )}
-              <div className={`bg-white rounded-lg shadow p-4 sm:p-6 mb-3 sm:mb-4 border-l-4 ${validationErrors.some(e => e.includes(`Question ${qIdx + 1}`)) ? 'border-red-500 ring-1 ring-red-200' : 'border-purple-600'}`}>
+              <div
+                className={`bg-white rounded-lg shadow p-4 sm:p-6 mb-3 sm:mb-4 border-l-4 ${
+                  validationErrors.some((e) =>
+                    e.includes(`Question ${qIdx + 1}`)
+                  )
+                    ? "border-red-500 ring-1 ring-red-200"
+                    : "border-purple-600"
+                }`}
+              >
                 <p className="text-sm sm:text-base text-gray-800 mb-4">
                   {q.text} <span className="text-red-500">*</span>
                 </p>
@@ -432,11 +468,19 @@ export default function App() {
           );
         })}
 
-        <div id="final-comments" className={`bg-white rounded-lg shadow p-4 sm:p-6 mb-3 sm:mb-4 border-l-4 ${validationErrors.some(e => e.includes("Final Comments")) ? 'border-red-500 ring-1 ring-red-200' : 'border-purple-600'}`}>
+        <div
+          id="final-comments"
+          className={`bg-white rounded-lg shadow p-4 sm:p-6 mb-3 sm:mb-4 border-l-4 ${
+            validationErrors.some((e) => e.includes("Final Comments"))
+              ? "border-red-500 ring-1 ring-red-200"
+              : "border-purple-600"
+          }`}
+        >
           <p className="text-sm sm:text-base text-gray-800 mb-4">
             Please share any additional recommendations for making ecotourism in
             Satchari National Park more effective, equitable, and sustainable
-            for both biodiversity and local communities. <span className="text-red-500">*</span>
+            for both biodiversity and local communities.{" "}
+            <span className="text-red-500">*</span>
           </p>
           <textarea
             className="w-full border-b-2 border-gray-300 focus:border-purple-600 outline-none py-2 h-24 resize-none text-sm bg-transparent"
