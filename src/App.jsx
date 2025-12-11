@@ -1,4 +1,16 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
+import { useExclusiveRanking } from "./hooks/useExclusiveRanking";
+import {
+  validateForm,
+  scrollToFirstError,
+  getFirstUnansweredElementId,
+} from "./utils/formValidation";
+import {
+  submitForm,
+  normalizeFormData,
+  getErrorMessage,
+} from "./services/formSubmissionService";
+import { sanitizeCommentInput, sanitizeTextInput } from "./utils/sanitization";
 
 const questions = [
   {
@@ -49,7 +61,7 @@ const questions = [
   {
     id: "q5",
     section:
-      "Section 2: Visitor Education and Interpretation (How Ecotourism Supports Conservation)",
+      "Section 2: Visitor Education and Interpretation",
     text: "What key messages should visitors to Satchari NP learn to enhance understanding and support for conservation?",
     options: [
       "The ecological importance of mixed evergreen forests for sustaining diverse wildlife animals and plants.",
@@ -111,113 +123,75 @@ const questions = [
 const ranks = ["1", "2", "3", "4", "5", "No"];
 
 export default function App() {
-  const [responses, setResponses] = useState({});
+  const { responses, updateRank } = useExclusiveRanking();
   const [otherText, setOtherText] = useState({});
   const [finalComment, setFinalComment] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState([]);
-
-  const handleRankChange = useCallback((qId, optIdx, rank) => {
-    console.log(
-      `Rank selected: Q${qId.replace("q", "")}, Option ${optIdx}, Rank: ${rank}`
-    );
-    setResponses((prev) => {
-      const newResponses = { ...prev };
-      if (!newResponses[qId]) newResponses[qId] = {};
-      newResponses[qId] = { ...newResponses[qId], [optIdx]: rank };
-      console.log("Updated responses:", newResponses);
-      return newResponses;
-    });
-  }, []);
+  const [submissionError, setSubmissionError] = useState("");
 
   const handleSubmit = async () => {
-    // Validate all questions are answered
-    const unanswered = [];
-    let firstUnansweredElement = null;
+    // Validate form
+    const { isValid, errors } = validateForm(
+      questions,
+      responses,
+      finalComment
+    );
 
-    questions.forEach((q, idx) => {
-      const qData = responses[q.id];
-      const hasAnyRank =
-        qData && Object.values(qData).some((rank) => rank && rank !== "");
-      if (!hasAnyRank) {
-        unanswered.push(`Question ${idx + 1}: ${q.text.substring(0, 50)}...`);
-        if (!firstUnansweredElement) {
-          firstUnansweredElement = document.getElementById(`question-${q.id}`);
-        }
-      }
-    });
-
-    // Validate final comment is filled
-    if (!finalComment.trim()) {
-      unanswered.push("Final Comments: Please share your recommendations");
-      if (!firstUnansweredElement) {
-        firstUnansweredElement = document.getElementById("final-comments");
-      }
-    }
-
-    if (unanswered.length > 0) {
-      setValidationErrors(unanswered);
-      // Scroll to first unanswered question
-      if (firstUnansweredElement) {
-        firstUnansweredElement.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-      } else {
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }
+    if (!isValid) {
+      setValidationErrors(errors);
+      setSubmissionError(""); // Clear any previous submission errors
+      const elementId = getFirstUnansweredElementId(errors);
+      scrollToFirstError(elementId);
       return;
     }
 
+    // Clear validation errors on successful validation
     setValidationErrors([]);
+    setSubmissionError("");
     setLoading(true);
 
-    const normalizedResponses = {};
-    questions.forEach((q) => {
-      const qId = q.id;
-      const numOptions = q.options.length;
-      const qData = responses[qId] || {};
-      const entry = {};
-      for (let i = 0; i < numOptions; i++) {
-        entry[i] = qData[i] || "No";
-      }
-      normalizedResponses[qId] = entry;
-    });
-
-    const data = {
-      timestamp: new Date().toISOString(),
-      responses: normalizedResponses,
-      otherText,
-      finalComment,
-    };
-
     try {
-      const scriptUrl =
-        "https://script.google.com/macros/s/AKfycbz7ATpAs1DXZxHGx8SvnHrwrtfYDXiOMLQ43CnD9RjcOV4O3hRkqNIo5AUNYl5wqJyCmA/exec";
-      if (!scriptUrl || scriptUrl === "YOUR_GOOGLE_APPS_SCRIPT_URL") {
-        console.error("Google Script URL not configured");
-        alert(
-          "Form is not configured. Please add your Google Apps Script URL to .env.local"
-        );
-        setLoading(false);
-        return;
-      }
+      const scriptUrl = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+      
+      // Normalize and sanitize data
+      const sanitizedOtherText = Object.entries(otherText).reduce(
+        (acc, [key, value]) => ({
+          ...acc,
+          [key]: sanitizeTextInput(value),
+        }),
+        {}
+      );
 
-      await fetch(scriptUrl, {
-        method: "POST",
-        mode: "no-cors",
-        headers: {
-          "Content-Type": "application/json",
+      const sanitizedFinalComment = sanitizeCommentInput(finalComment);
+
+      const data = normalizeFormData(
+        questions,
+        responses,
+        sanitizedOtherText,
+        sanitizedFinalComment
+      );
+
+      // Submit with retry logic
+      await submitForm(data, scriptUrl, {
+        maxRetries: 3,
+        timeout: 5000,
+        onRetry: (attempt, error, delayMs) => {
+          const isLastAttempt = delayMs === 0;
+          const message = isLastAttempt
+            ? `Failed to submit after ${attempt} attempts`
+            : `Retrying... (attempt ${attempt + 1})`;
+          console.log(`${message}: ${error.message}`);
         },
-        body: JSON.stringify(data),
       });
 
       console.log("Form Data:", JSON.stringify(data, null, 2));
       setSubmitted(true);
     } catch (error) {
-      console.error("Error:", error);
-      alert("Submission failed. Please try again.");
+      console.error("Submission error:", error);
+      setSubmissionError(getErrorMessage(error));
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } finally {
       setLoading(false);
     }
@@ -289,13 +263,56 @@ export default function App() {
                       className="text-sm text-red-700 flex items-start"
                     >
                       <span className="text-red-600 mr-2 font-bold">!</span>
-                      <span>{error}</span>
+                      <span>{error.message}</span>
                     </li>
                   ))}
                 </ul>
               </div>
               <button
                 onClick={() => setValidationErrors([])}
+                className="flex-shrink-0 text-red-400 hover:text-red-600 transition"
+                aria-label="Dismiss"
+              >
+                <svg
+                  className="h-5 w-5"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {submissionError && (
+          <div className="bg-red-50 border border-red-200 p-4 sm:p-5 mb-6 rounded-lg">
+            <div className="flex gap-3">
+              <div className="flex-shrink-0 mt-0.5">
+                <svg
+                  className="h-5 w-5 text-red-500"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-red-800">
+                  Submission Failed
+                </p>
+                <p className="text-sm text-red-700 mt-1">{submissionError}</p>
+              </div>
+              <button
+                onClick={() => setSubmissionError("")}
                 className="flex-shrink-0 text-red-400 hover:text-red-600 transition"
                 aria-label="Dismiss"
               >
@@ -328,7 +345,7 @@ export default function App() {
           </p>
         </div>
 
-        {questions.map((q, qIdx) => {
+        {questions.map((q) => {
           const questionId = `question-${q.id}`;
           const showSection = q.section && q.section !== currentSection;
           if (q.section) currentSection = q.section;
@@ -345,7 +362,7 @@ export default function App() {
               <div
                 className={`bg-white rounded-lg shadow p-4 sm:p-6 mb-3 sm:mb-4 border-l-4 ${
                   validationErrors.some((e) =>
-                    e.includes(`Question ${qIdx + 1}`)
+                    e.qId === q.id
                   )
                     ? "border-red-500 ring-1 ring-red-200"
                     : "border-purple-600"
@@ -396,9 +413,9 @@ export default function App() {
                                   checked={currentRank === r}
                                   onChange={(e) => {
                                     if (e.target.checked) {
-                                      handleRankChange(q.id, optIdx, r);
+                                      updateRank(q.id, optIdx, r);
                                     } else {
-                                      handleRankChange(q.id, optIdx, "");
+                                      updateRank(q.id, optIdx, "");
                                     }
                                   }}
                                 />
@@ -431,9 +448,9 @@ export default function App() {
                                 checked={currentRank === r}
                                 onChange={(e) => {
                                   if (e.target.checked) {
-                                    handleRankChange(q.id, optIdx, r);
+                                    updateRank(q.id, optIdx, r);
                                   } else {
-                                    handleRankChange(q.id, optIdx, "");
+                                    updateRank(q.id, optIdx, "");
                                   }
                                 }}
                               />
@@ -471,7 +488,7 @@ export default function App() {
         <div
           id="final-comments"
           className={`bg-white rounded-lg shadow p-4 sm:p-6 mb-3 sm:mb-4 border-l-4 ${
-            validationErrors.some((e) => e.includes("Final Comments"))
+            validationErrors.some((e) => e.type === "final-comment")
               ? "border-red-500 ring-1 ring-red-200"
               : "border-purple-600"
           }`}
