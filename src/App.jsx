@@ -65,12 +65,10 @@ const questions = [
     text: "What key messages should visitors to Satchari NP learn to enhance understanding and support for conservation?",
     options: [
       "The ecological importance of mixed evergreen forests for sustaining diverse wildlife animals and plants.",
-      "The conservation significance of species dwelling in the park.",
       "The role of Satchari NP as a biodiversity refuge within a landscape dominated by tea estates and settlements.",
       "How responsible visitor behavior (noise control, waste disposal, respectful observation) directly supports wildlife well-being.",
       "The contributions of local communities and co-management initiatives in protecting the park's biodiversity.",
       "The importance of ongoing research and monitoring to guide adaptive, evidence-based management.",
-      "Opportunities for visitors to learn about wildlife and ecosystem services through guided observation and interpretive materials (signboards, displays, digital media).",
     ],
   },
   {

@@ -11,7 +11,8 @@ export function useExclusiveRanking() {
 
   /**
    * Update rank for an option with exclusive constraint
-   * If a rank is assigned to an option, it's automatically removed from other options
+   * Numeric ranks (1-5) are exclusive: only one option per rank per question
+   * "No" is non-exclusive: multiple options can be marked as "No"
    * 
    * @param {string} qId - Question ID (e.g., 'q1')
    * @param {number} optIdx - Option index
@@ -33,15 +34,20 @@ export function useExclusiveRanking() {
         return newResponses;
       }
 
-      // If setting a rank, remove that rank from other options in this question
       const updatedQData = { ...newResponses[qId] };
-      Object.keys(updatedQData).forEach((key) => {
-        const keyNum = parseInt(key);
-        // If different option has the same rank, clear it
-        if (keyNum !== optIdx && updatedQData[key] === rank) {
-          updatedQData[key] = "";
-        }
-      });
+
+      // "No" is non-exclusive - allow multiple options to be marked as "No"
+      // Only enforce exclusivity for numeric ranks (1-5)
+      if (rank !== "No") {
+        // For numeric ranks, remove that rank from other options in this question
+        Object.keys(updatedQData).forEach((key) => {
+          const keyNum = parseInt(key);
+          // If different option has the same numeric rank, clear it
+          if (keyNum !== optIdx && updatedQData[key] === rank) {
+            updatedQData[key] = "";
+          }
+        });
+      }
 
       // Set the new rank
       updatedQData[optIdx] = rank;
