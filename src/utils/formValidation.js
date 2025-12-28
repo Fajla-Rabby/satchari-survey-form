@@ -35,13 +35,8 @@ export function validateForm(questions, responses, finalComment) {
     }
   });
 
-  // Validate final comments
-  if (!finalComment || !finalComment.trim()) {
-    errors.push({
-      type: "final-comment",
-      message: "Final Comments: Please share your recommendations",
-    });
-  }
+  // Final comments are optional
+  // No validation required
 
   return {
     isValid: errors.length === 0,

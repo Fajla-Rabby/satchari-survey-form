@@ -494,8 +494,7 @@ export default function App() {
           <p className="text-sm sm:text-base text-gray-800 mb-4">
             Please share any additional recommendations for making ecotourism in
             Satchari National Park more effective, equitable, and sustainable
-            for both biodiversity and local communities.{" "}
-            <span className="text-red-500">*</span>
+            for both biodiversity and local communities.
           </p>
           <textarea
             className="w-full border-b-2 border-gray-300 focus:border-purple-600 outline-none py-2 h-24 resize-none text-sm bg-transparent"
